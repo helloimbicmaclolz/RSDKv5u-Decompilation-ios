@@ -1,0 +1,41 @@
+name: Build iOS IPA
+on: [push, workflow_dispatch]
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Dependencies
+        run: |
+          brew install cmake libogg libtheora sdl2
+
+      - name: Configure CMake (Enable Plus DLC)
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DRETRO_DISABLE_PLUS=OFF \
+            -DMANIA_PRE_PLUS=OFF
+
+      - name: Compile and Archive App
+        run: |
+          cd build
+          cmake --build . --config Release
+
+      - name: Package into Sideloadable IPA
+        run: |
+          mkdir -p build/Payload
+          mv build/Release-iphoneos/SonicMania.app build/Payload/
+          cd build && zip -r SonicMania_Plus.ipa Payload
+
+      - name: Upload Finished Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonicMania-Plus-iOS-IPA
+          path: build/SonicMania_Plus.ipa
